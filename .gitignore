@@ -151,3 +151,6 @@ resources/cache/custom_rules.pkl
 #ignore custom build artifacts
 /build-output
 Dockerfile.build
+
+# Eclipse .project file
+/.project
