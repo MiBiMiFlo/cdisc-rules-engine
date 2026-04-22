@@ -66,6 +66,7 @@ def valid_data_file(data_path: list) -> tuple[list, set]:
         DataFormatTypes.XPT.value,
         DataFormatTypes.JSON.value,
         DataFormatTypes.NDJSON.value,
+        DataFormatTypes.DSJC.value,
         DataFormatTypes.XLSX.value,
         DataFormatTypes.CSV.value,
     ]
@@ -329,7 +330,7 @@ def load_custom_dotenv_from_data_options(ctx, param, value):
     "--filetype",
     default=None,
     required=False,
-    help="File extension to use for input files in the data directory (e.g., 'json', 'xpt', 'xlsx', 'ndjson')",
+    help="File extension to use for input files in the data directory (e.g., 'json', 'xpt', 'xlsx', 'ndjson', 'dsjc')",
 )
 @click.option(
     "-dp",

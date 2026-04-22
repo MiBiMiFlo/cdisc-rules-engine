@@ -39,6 +39,7 @@ def list_dataset_metadata_handler(dataset_paths: Tuple[str]) -> List[dict]:
             DataFormatTypes.XPT.value,
             DataFormatTypes.JSON.value,
             DataFormatTypes.NDJSON.value,
+            DataFormatTypes.DSJC.value,
             DataFormatTypes.XLSX.value,
         ]:
             invalid_files.append((path, file_ext))
@@ -47,7 +48,7 @@ def list_dataset_metadata_handler(dataset_paths: Tuple[str]) -> List[dict]:
         error_msg = "Unsupported file format(s) detected:\n"
         for file, ext in invalid_files:
             error_msg += f"  - {file} (format: {ext})\n"
-        error_msg += "\nSupported formats: SAS V5 XPT, Dataset-JSON (JSON or NDJSON), or Excel (XLSX)"
+        error_msg += "\nSupported formats: SAS V5 XPT, Dataset-JSON (JSON, NDJSON, or DSJC), or Excel (XLSX)"
         raise ValueError(error_msg)
 
     cache_service = CacheServiceFactory(config).get_service()

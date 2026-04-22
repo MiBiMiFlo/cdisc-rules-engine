@@ -21,6 +21,9 @@ from cdisc_rules_engine.services.datasetjson_metadata_reader import (
 from cdisc_rules_engine.services.datasetndjson_metadata_reader import (
     DatasetNDJSONMetadataReader,
 )
+from cdisc_rules_engine.services.datasetdsjc_metadata_reader import (
+    DatasetDSJCMetadataReader,
+)
 from cdisc_rules_engine.services.csv_metadata_reader import DatasetCSVMetadataReader
 from cdisc_rules_engine.utilities.utils import (
     convert_file_size,
@@ -197,6 +200,7 @@ class LocalDataService(BaseDataService):
             DataFormatTypes.XPT.value: DatasetXPTMetadataReader,
             DataFormatTypes.JSON.value: DatasetJSONMetadataReader,
             DataFormatTypes.NDJSON.value: DatasetNDJSONMetadataReader,
+            DataFormatTypes.DSJC.value: DatasetDSJCMetadataReader,
             DataFormatTypes.CSV.value: DatasetCSVMetadataReader,
         }
 
@@ -207,7 +211,7 @@ class LocalDataService(BaseDataService):
                 f"Unsupported file format '{file_extension}' in file '{file_name}'.\n"
                 f"Supported formats: {supported_formats}\n"
                 f"Please provide dataset files in SAS V5 XPT, "
-                f"Dataset-JSON (JSON or NDJSON), CSV, or Excel (XLSX) format."
+                f"Dataset-JSON (JSON, NDJSON, or DSJC), CSV, or Excel (XLSX) format."
             )
 
         contents_metadata = _metadata_reader_map[file_extension](

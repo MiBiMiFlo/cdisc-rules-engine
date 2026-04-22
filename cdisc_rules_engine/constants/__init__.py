@@ -19,7 +19,7 @@ NULL_FLAVORS = ["", None, {None}, [], {}, np.nan]
 KNOWN_REPORT_EXTENSIONS = [".json", ".xlsx", ".xls"]
 
 VALIDATION_FORMATS_MESSAGE = (
-    "SAS V5 XPT, Dataset-JSON (JSON or NDJSON), or Excel (XLSX)"
+    "SAS V5 XPT, Dataset-JSON (JSON, NDJSON, or DSJC), or Excel (XLSX)"
 )
 
 DEFAULT_ENCODING: str = "utf-8"
