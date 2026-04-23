@@ -1,0 +1,71 @@
+{
+  "id": "6b90ab26-d258-5722-a4dc-10bd7267b5b5",
+  "Authorities": [
+    {
+      "Organization": "CDISC",
+      "Standards": [
+        {
+          "Name": "ADaMIG",
+          "Version": "1.3",
+          "References": [
+            {
+              "Citations": [
+                {
+                  "Cited_Guidance": "ADaMIG v1.3, Section 3.1.1, Item 1: To ensure compliance with SAS Version 5 transport file format and Oracle constraints, all ADaM variable names must be no more than 8 characters in length, start with a letter (not underscore), and be comprised only of letters (A-Z), underscore (_), and numerals (0-9). All ADaM variable labels must be no more than 40 characters in length. All ADaM character variables must be no more than 200 characters in length.\n\nADaMIG v1.3, Section 3.3.4.1, Table 3.3.4.1.1: ",
+                  "Document": "ADaMIG v1.3; ADaMIG-MD v1.0",
+                  "Section": "3.1.1; 3.3.4.1; 3.1",
+                  "Item": "1; Table 3.3.4.1.1"
+                }
+              ],
+              "Origin": "ADaM Conformance Rules",
+              "Rule_Identifier": {
+                "Id": "CR143",
+                "Version": "2"
+              },
+              "Version": "5.0"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Core": {
+    "Id": "ADAMCR-0143",
+    "Status": "Draft",
+    "Version": "2"
+  },
+  "Description": "PARAMCD has more than 8 characters in length",
+  "Rule_Type": "Record Data",
+  "Sensitivity": "Record",
+  "Executability": "Fully Executable",
+  "Scope": {
+    "Classes": {
+      "Include": [
+        "ALL"
+      ]
+    }
+  },
+  "Check": {
+    "name": "PARAMCD",
+    "operator": "longer_than",
+    "value": 8
+  },
+  "Outcome": {
+    "Message": "PARAMCD has more than 8 characters in length",
+    "Output_Variables": [
+      "PARAMCD"
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "/mdr/rules/adamcr/1-3/rule/6b90ab26-d258-5722-a4dc-10bd7267b5b5",
+      "title": "ADAMCR-0143",
+      "type": "Conformance Rule"
+    },
+    "package": {
+      "href": "/mdr/rules/adamcr/1-3",
+      "title": "ADaM Conformance Rules v5.0 (ADaMIG v1.3)",
+      "type": "Conformance Rules Package"
+    }
+  }
+}
