@@ -214,7 +214,6 @@ class DataProcessor:
         if len(unique_idvar_values) == 1:
             right_dataset = DataProcessor.process_supp(right_dataset)
             dynamic_key = right_dataset["IDVAR"].iloc[0]
-            temp_key = f"{dynamic_key}__norm"
 
             is_blank: bool = pd.isna(dynamic_key) or str(dynamic_key).strip() == ""
             # Determine the common keys present in both datasets
@@ -223,7 +222,28 @@ class DataProcessor:
                 for key in static_keys
                 if key in left_dataset.columns and key in right_dataset.columns
             ]
-            if not is_blank:
+            # If IDVAR names a column that is already a natural join key
+            # (e.g. USUBJID), common_keys already carries it and the real
+            # column already exists on the SUPP frame. Appending it again
+            # or renaming IDVARVAL onto it would duplicate the merge key
+            # or collide with the existing USUBJID column — both corrupt
+            # the merge. Fall through to the blank branch: drop IDVAR +
+            # IDVARVAL and merge on common_keys alone. IDVARVAL is
+            # redundant with the real column in this case.
+            dynamic_is_natural_key = (
+                not is_blank
+                and dynamic_key in static_keys
+                and dynamic_key in left_dataset.columns
+                and dynamic_key in right_dataset.columns
+            )
+            if is_blank or dynamic_is_natural_key:
+                columns_to_drop = [
+                    col for col in ["IDVAR", "IDVARVAL"] if col in right_dataset.columns
+                ]
+                current_supp = right_dataset.drop(columns=columns_to_drop)
+                temp_key = None
+            else:
+                temp_key = f"{dynamic_key}__norm"
                 left_dataset[temp_key] = left_dataset[dynamic_key]
 
                 common_keys.append(dynamic_key)
@@ -237,11 +257,6 @@ class DataProcessor:
                     current_supp[dynamic_key] = current_supp[dynamic_key].apply(
                         custom_str_conversion
                     )
-            else:
-                columns_to_drop = [
-                    col for col in ["IDVAR", "IDVARVAL"] if col in right_dataset.columns
-                ]
-                current_supp = right_dataset.drop(columns=columns_to_drop)
             if dataset_implementation == DaskDataset:
                 current_supp = DaskDataset(current_supp.data)
                 left_dataset = left_dataset.merge(
@@ -262,7 +277,7 @@ class DataProcessor:
                     )
                 )
                 DataProcessor._validate_qnam(left_dataset.data, qnam_list, common_keys)
-            if not is_blank:
+            if temp_key is not None:
                 left_dataset[dynamic_key] = left_dataset[temp_key]
                 left_dataset = left_dataset.drop(columns=[temp_key])
         else:
