@@ -388,3 +388,62 @@ def test_variables_metadata_handles_missing_columns(mock_get_vars, mock_get_ds):
         ].values[0]
         == 0
     )
+
+
+@patch("cdisc_rules_engine.services.data_services.LocalDataService.get_dataset")
+@patch(
+    "cdisc_rules_engine.services.data_services.LocalDataService.get_variables_metadata"
+)
+def test_variables_metadata_attaches_original_columns(mock_get_vars, mock_get_ds):
+    """Regression for CORE-000012 / Finding #9.
+
+    The VariablesMetadataDatasetBuilder projects the source dataset into a
+    metadata frame (columns = variable_name, variable_label, ...), which
+    hides the source dataset's real column set from operators like
+    ``exists``. The builder now attaches an ``_original_columns`` frozenset
+    to the frame's ``attrs`` so operators can recover the original schema.
+    """
+    mock_get_vars.return_value = PandasDataset(
+        pd.DataFrame(
+            {
+                "variable_name": ["STUDYID", "USUBJID", "AETERM", "AEOCCUR"],
+                "variable_label": ["Study ID", "Subject ID", "AE Term", "AE Occ"],
+                "variable_size": [16, 20, 200, 1],
+                "variable_order_number": [1, 2, 3, 4],
+                "variable_data_type": ["Char", "Char", "Char", "Char"],
+                "variable_format": ["", "", "", ""],
+            }
+        )
+    )
+
+    rule = {
+        "operations": None,
+        "conditions": ConditionCompositeFactory.get_condition_composite(
+            {"all": [{"name": "AEOCCUR", "operator": "exists"}]}
+        ),
+        "output_variables": ["AEOCCUR"],
+    }
+
+    builder = VariablesMetadataDatasetBuilder(
+        rule=rule,
+        data_service=create_data_service_mock(mock_get_vars, mock_get_ds),
+        cache_service=InMemoryCacheService(),
+        rule_processor=MagicMock(),
+        data_processor=None,
+        dataset_path="/test/ae.xpt",
+        datasets=[],
+        dataset_metadata=MagicMock(),
+        define_xml_path=None,
+        standard="sdtmig",
+        standard_version="3-4",
+        standard_substandard=None,
+    )
+
+    result = builder.build()
+    original_columns = result.data.attrs.get("_original_columns")
+    assert isinstance(original_columns, frozenset)
+    assert "AEOCCUR" in original_columns
+    assert "STUDYID" in original_columns
+    # The metadata-projection columns must NOT leak into _original_columns.
+    assert "variable_name" not in original_columns
+    assert "variable_label" not in original_columns

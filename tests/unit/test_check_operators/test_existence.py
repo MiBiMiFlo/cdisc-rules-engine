@@ -72,3 +72,38 @@ def test_not_exists(target, dataset_type, expected_result):
         {"target": target}
     )
     assert result.equals(df.convert_to_series(expected_result))
+
+
+def test_exists_consults_original_columns_attr():
+    # Regression for CORE-000012 / Finding #9. Variable Metadata Check rules
+    # evaluate the Check against a metadata projection whose columns are
+    # variable_name/variable_label/... - not the source dataset's columns.
+    # The builder attaches _original_columns (frozenset of the source
+    # dataset's column names) via df.attrs; exists must consult it so
+    # `exists AEOCCUR` on an AE projection returns True when AEOCCUR was
+    # a real column on the AE dataset.
+    import pandas as pd
+    meta_df = pd.DataFrame(
+        {
+            "variable_name": ["STUDYID", "USUBJID", "AETERM", "AEOCCUR"],
+            "variable_label": ["", "", "", ""],
+        }
+    )
+    meta_df.attrs["_original_columns"] = frozenset(
+        ["STUDYID", "USUBJID", "AETERM", "AEOCCUR"]
+    )
+    df = PandasDataset(meta_df)
+
+    # AEOCCUR is not a column on the projection but is in _original_columns.
+    result = DataframeType({"value": df}).exists({"target": "AEOCCUR"})
+    assert result.tolist() == [True, True, True, True]
+
+    # A name that is neither a projection column nor in _original_columns
+    # must return False.
+    result = DataframeType({"value": df}).exists({"target": "NOTACOLUMN"})
+    assert result.tolist() == [False, False, False, False]
+
+    # The projection's meta columns themselves must still be findable via
+    # the normal path, independent of _original_columns.
+    result = DataframeType({"value": df}).exists({"target": "variable_name"})
+    assert result.tolist() == [True, True, True, True]

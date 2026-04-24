@@ -177,9 +177,19 @@ class DataframeType(BaseType):
         column_exists = target_column in self.value.columns
         if column_exists:
             return self.value.convert_to_series([True] * len(self.value))
-        else:
-            exists_in_nested = self.value.apply(check_row, axis=1).any()
-            return self.value.convert_to_series([exists_in_nested] * len(self.value))
+        # Variable Metadata Check rules evaluate the Check against a
+        # metadata projection (`variable_name`, `variable_label`, ...) rather
+        # than the source dataset. The source dataset's real column set is
+        # carried through as `_original_columns` in the frame's pandas
+        # attrs so `exists` can still answer correctly for the original
+        # schema. See CORE-000012 / Finding #9.
+        original_columns = getattr(
+            getattr(self.value, "data", None), "attrs", {}
+        ).get("_original_columns")
+        if original_columns and target_column in original_columns:
+            return self.value.convert_to_series([True] * len(self.value))
+        exists_in_nested = self.value.apply(check_row, axis=1).any()
+        return self.value.convert_to_series([exists_in_nested] * len(self.value))
 
     @log_operator_execution
     @type_operator(FIELD_DATAFRAME)

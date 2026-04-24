@@ -24,6 +24,24 @@ class VariablesMetadataDatasetBuilder(BaseDatasetBuilder):
         if self.rule and self._needs_variable_max_size():
             variables_metadata = self._add_variable_max_size(variables_metadata)
 
+        # Attach the source dataset's original column names so operators
+        # like `exists` can evaluate against the real dataset schema even
+        # though this frame's columns are meta-field names
+        # (variable_name, variable_label, ...). Without this, VMC rules
+        # like CORE-000012 (`exists AEOCCUR` on the AE domain) silently
+        # evaluate to 0 violations because AEOCCUR isn't a column on the
+        # metadata projection.
+        try:
+            original_columns = frozenset(
+                str(v) for v in variables_metadata.data["variable_name"].tolist()
+            )
+        except Exception:
+            original_columns = frozenset()
+        try:
+            variables_metadata.data.attrs["_original_columns"] = original_columns
+        except Exception:
+            pass
+
         return variables_metadata
 
     def _needs_variable_max_size(self):

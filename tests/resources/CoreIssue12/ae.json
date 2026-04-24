@@ -1,0 +1,62 @@
+{
+  "datasetJSONCreationDateTime": "2026-04-24T00:00:00",
+  "datasetJSONVersion": "1.1.0",
+  "sourceSystem": { "name": "Cumba", "version": "1.0.0" },
+  "studyOID": "CORE000012.REPRO",
+  "metaDataVersionOID": "MDV.CORE000012",
+  "itemGroupOID": "IG.AE",
+  "records": 2,
+  "name": "AE",
+  "label": "Adverse Events",
+  "columns": [
+    {
+      "itemOID": "IT.AE.STUDYID",
+      "name": "STUDYID",
+      "label": "Study Identifier",
+      "dataType": "string",
+      "length": 12,
+      "keySequence": 1
+    },
+    {
+      "itemOID": "IT.AE.DOMAIN",
+      "name": "DOMAIN",
+      "label": "Domain Abbreviation",
+      "dataType": "string",
+      "length": 2
+    },
+    {
+      "itemOID": "IT.AE.USUBJID",
+      "name": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "dataType": "string",
+      "length": 16,
+      "keySequence": 2
+    },
+    {
+      "itemOID": "IT.AE.AESEQ",
+      "name": "AESEQ",
+      "label": "Sequence Number",
+      "dataType": "integer",
+      "length": 8,
+      "keySequence": 3
+    },
+    {
+      "itemOID": "IT.AE.AETERM",
+      "name": "AETERM",
+      "label": "Reported Term for the Adverse Event",
+      "dataType": "string",
+      "length": 40
+    },
+    {
+      "itemOID": "IT.AE.AEOCCUR",
+      "name": "AEOCCUR",
+      "label": "Adverse Event Occurrence",
+      "dataType": "string",
+      "length": 1
+    }
+  ],
+  "rows": [
+    ["S1", "AE", "S1-001", 1, "Headache", "Y"],
+    ["S1", "AE", "S1-002", 1, "Nausea",   "Y"]
+  ]
+}

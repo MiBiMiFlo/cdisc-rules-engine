@@ -1,0 +1,169 @@
+{
+  "Authorities": [
+    {
+      "Organization": "CDISC",
+      "Standards": [
+        {
+          "Name": "SDTMIG",
+          "References": [
+            {
+              "Citations": [
+                {
+                  "Cited_Guidance": "The following Qualifiers would not be used in AE; --OCCUR, --STAT, and --REASND. They are the only Qualifiers from the SDTM Events Class not in the AE domain. They are not permitted because the AE domain contains only records for adverse events that actually occurred.",
+                  "Document": "SDTMIG v3.4",
+                  "Item": "Assumption 9",
+                  "Section": "6.2.1"
+                }
+              ],
+              "Origin": "SDTM and SDTMIG Conformance Rules",
+              "Rule_Identifier": {
+                "Id": "CG0040",
+                "Version": "1"
+              },
+              "Version": "2.0"
+            }
+          ],
+          "Version": "3.4"
+        },
+        {
+          "Name": "SDTMIG",
+          "References": [
+            {
+              "Citations": [
+                {
+                  "Cited_Guidance": "The following Qualifiers would not be used in AE; --OCCUR, --STAT, and--REASND. They are the only Qualifiers from the SDTM Events Class not in the AE domain. They are not permitted because the AE domain contains only records for adverse events that actually occurred.",
+                  "Document": "SDTMIG v3.3",
+                  "Item": "Assumption 9",
+                  "Section": "6.2.1"
+                }
+              ],
+              "Origin": "SDTM and SDTMIG Conformance Rules",
+              "Rule_Identifier": {
+                "Id": "CG0040",
+                "Version": "1"
+              },
+              "Version": "2.0"
+            }
+          ],
+          "Version": "3.3"
+        },
+        {
+          "Name": "SDTMIG",
+          "References": [
+            {
+              "Citations": [
+                {
+                  "Cited_Guidance": "The following Qualifiers would not be used in AE; --OCCUR, --STAT, and--REASND. They are the only Qualifiers from the SDTM Events Class not in the AE domain. They are not permitted because the AE domain contains only records for adverse events that actually occurred.",
+                  "Document": "SDTMIG v3.2",
+                  "Item": "Assumption 8",
+                  "Section": "6.2."
+                }
+              ],
+              "Origin": "SDTM and SDTMIG Conformance Rules",
+              "Rule_Identifier": {
+                "Id": "CG0040",
+                "Version": "1"
+              },
+              "Version": "2.0"
+            }
+          ],
+          "Version": "3.2"
+        },
+        {
+          "Name": "TIG",
+          "References": [
+            {
+              "Citations": [
+                {
+                  "Cited_Guidance": "The following qualifiers would not be used in AE: --OCCUR, --STAT, and--REASND. They are the only qualifiers from the SDTM Events class not in the AE domain. They are not permitted because the AE domain contains only records for adverse events that actually occurred.'",
+                  "Document": "TIG 1.0",
+                  "Item": "Assumption 10",
+                  "Section": "2.8.10.1"
+                }
+              ],
+              "Origin": "TIG Conformance Rules",
+              "Rule_Identifier": {
+                "Id": "TIG0319",
+                "Version": "1"
+              },
+              "Version": "1.0"
+            }
+          ],
+          "Substandard": "SDTM",
+          "Version": "1.0"
+        }
+      ]
+    }
+  ],
+  "Check": {
+    "all": [
+      {
+        "name": "AEOCCUR",
+        "operator": "exists"
+      }
+    ]
+  },
+  "Core": {
+    "Id": "CORE-000012",
+    "Status": "Published",
+    "Version": "1"
+  },
+  "Description": "Raise an error when AEOCCUR exists in AE dataset.",
+  "Executability": "Fully Executable",
+  "Outcome": {
+    "Message": "AEOCCUR is present in AE dataset.",
+    "Output_Variables": [
+      "AEOCCUR"
+    ]
+  },
+  "Rule_Type": "Variable Metadata Check",
+  "Scope": {
+    "Classes": {
+      "Include": [
+        "EVENTS"
+      ]
+    },
+    "Domains": {
+      "Include": [
+        "AE"
+      ]
+    },
+    "Use_Case": "INDH"
+  },
+  "Sensitivity": "Dataset",
+  "_links": {
+    "package": {
+      "href": "/mdr/rules/sdtmig/3-4",
+      "title": "sdtmig Conformance Rules v3-4",
+      "type": "Conformance Rules Package"
+    },
+    "self": {
+      "href": "/mdr/rules/sdtmig/3-4/rule/05d5feca-413e-4d0b-a802-2e70ea5a0bfd",
+      "title": "CORE-000012",
+      "type": "Conformance Rule"
+    },
+    "standards": [
+      {
+        "href": "/mdr/sdtmig/3-3",
+        "title": "Study Data Tabulation Model Implementation Guide: Human Clinical Trials",
+        "type": "Implementation Guide"
+      },
+      {
+        "href": "/mdr/tig/1-0",
+        "title": "",
+        "type": "Implementation Guide"
+      },
+      {
+        "href": "/mdr/sdtmig/3-2",
+        "title": "Study Data Tabulation Model Implementation Guide: Human Clinical Trials",
+        "type": "Implementation Guide"
+      },
+      {
+        "href": "/mdr/sdtmig/3-4",
+        "title": "Study Data Tabulation Model Implementation Guide: Human Clinical Trials",
+        "type": "Implementation Guide"
+      }
+    ]
+  },
+  "id": "05d5feca-413e-4d0b-a802-2e70ea5a0bfd"
+}
