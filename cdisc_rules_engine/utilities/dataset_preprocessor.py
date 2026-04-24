@@ -1,4 +1,4 @@
-from typing import Iterable, List, Union
+from typing import Iterable, List, Set, Union
 
 from cdisc_rules_engine.models.dataset.dataset_interface import DatasetInterface
 from cdisc_rules_engine.models.sdtm_dataset_metadata import SDTMDatasetMetadata
@@ -168,6 +168,7 @@ class DatasetPreprocessor:
                         right_dataset=other_dataset,
                         right_dataset_domain_details=domain_details,
                         datasets=datasets,
+                        renamed_right_columns=referenced_targets,
                     )
                     merged_domains.add(
                         file_info.domain if file_info.domain else file_info.name
@@ -515,6 +516,7 @@ class DatasetPreprocessor:
         right_dataset: DatasetInterface,
         right_dataset_domain_details: dict,
         datasets: List[dict],
+        renamed_right_columns: Set[str] = None,
     ) -> DatasetInterface:
         """
         Merges datasets on their match keys.
@@ -535,6 +537,17 @@ class DatasetPreprocessor:
             "--",
             right_dataset_domain_name,
         )
+        # If `preprocess` renamed right-side columns (e.g. USUBJID → DM.USUBJID
+        # because the Check references DM.USUBJID), the match keys must reflect
+        # that rename too — otherwise pandas tries to join on a column that no
+        # longer exists on the right frame.
+        if renamed_right_columns:
+            right_dataset_match_keys = [
+                f"{right_dataset_domain_name}.{k}"
+                if k in renamed_right_columns
+                else k
+                for k in right_dataset_match_keys
+            ]
 
         # merge datasets based on their type
         if right_dataset_domain_name == "RELREC":

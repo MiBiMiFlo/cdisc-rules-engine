@@ -1,0 +1,33 @@
+{
+  "datasetJSONCreationDateTime": "2026-04-23T00:00:00",
+  "datasetJSONVersion": "1.1.0",
+  "sourceSystem": { "name": "Cumba", "version": "1.0.0" },
+  "studyOID": "ADAMCR0053.REPRO",
+  "metaDataVersionOID": "MDV.ADAMCR0053",
+  "itemGroupOID": "IG.ADLB",
+  "records": 2,
+  "name": "ADLB",
+  "label": "Analysis Dataset Laboratory",
+  "columns": [
+    {
+      "itemOID": "IT.ADLB.STUDYID",
+      "name": "STUDYID",
+      "label": "Study Identifier",
+      "dataType": "string",
+      "length": 12,
+      "keySequence": 1
+    },
+    {
+      "itemOID": "IT.ADLB.USUBJID",
+      "name": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "dataType": "string",
+      "length": 16,
+      "keySequence": 2
+    }
+  ],
+  "rows": [
+    ["S1", "001"],
+    ["S1", "002"]
+  ]
+}

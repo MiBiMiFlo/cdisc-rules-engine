@@ -1,0 +1,80 @@
+{
+  "datasetJSONCreationDateTime": "2026-04-23T00:00:00",
+  "datasetJSONVersion": "1.1.0",
+  "sourceSystem": { "name": "Cumba", "version": "1.0.0" },
+  "studyOID": "CORE000726.REPRO",
+  "metaDataVersionOID": "MDV.CORE000726",
+  "itemGroupOID": "IG.SUPPDM",
+  "records": 2,
+  "name": "SUPPDM",
+  "label": "Supplemental Qualifiers for DM",
+  "columns": [
+    {
+      "itemOID": "IT.SUPPDM.STUDYID",
+      "name": "STUDYID",
+      "label": "Study Identifier",
+      "dataType": "string",
+      "length": 12,
+      "keySequence": 1
+    },
+    {
+      "itemOID": "IT.SUPPDM.RDOMAIN",
+      "name": "RDOMAIN",
+      "label": "Related Domain",
+      "dataType": "string",
+      "length": 2,
+      "keySequence": 2
+    },
+    {
+      "itemOID": "IT.SUPPDM.USUBJID",
+      "name": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "dataType": "string",
+      "length": 16,
+      "keySequence": 3
+    },
+    {
+      "itemOID": "IT.SUPPDM.IDVAR",
+      "name": "IDVAR",
+      "label": "Identifying Variable",
+      "dataType": "string",
+      "length": 8,
+      "keySequence": 4
+    },
+    {
+      "itemOID": "IT.SUPPDM.IDVARVAL",
+      "name": "IDVARVAL",
+      "label": "Identifying Variable Value",
+      "dataType": "string",
+      "length": 16,
+      "keySequence": 5
+    },
+    {
+      "itemOID": "IT.SUPPDM.QNAM",
+      "name": "QNAM",
+      "label": "Qualifier Variable Name",
+      "dataType": "string",
+      "length": 8,
+      "keySequence": 6
+    },
+    {
+      "itemOID": "IT.SUPPDM.QLABEL",
+      "name": "QLABEL",
+      "label": "Qualifier Variable Label",
+      "dataType": "string",
+      "length": 40
+    },
+    {
+      "itemOID": "IT.SUPPDM.QVAL",
+      "name": "QVAL",
+      "label": "Data Value",
+      "dataType": "string",
+      "length": 32,
+      "keySequence": 7
+    }
+  ],
+  "rows": [
+    ["STUDY01", "DM", "STUDY01-0001", "USUBJID", "STUDY01-0001", "OTHER", "Other Qualifier", "placeholder"],
+    ["STUDY01", "DM", "STUDY01-0002", "USUBJID", "STUDY01-0002", "OTHER", "Other Qualifier", "placeholder"]
+  ]
+}

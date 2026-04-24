@@ -350,3 +350,56 @@ def test_merge_pivot_supp_dataset_blank_idvar(dataset_implementation):
         result_data[result_data["USUBJID"] == "CDISC02"]["DMPOPFLAG"].values[0] == "N"
     )
     assert len(result_data) == 2
+
+
+@pytest.mark.parametrize("dataset_implementation", [PandasDataset, DaskDataset])
+def test_merge_pivot_supp_dataset_idvar_equals_usubjid(dataset_implementation):
+    # Regression for CORE-000726: when IDVAR itself names a natural join key
+    # (USUBJID) that is already in static_keys and already a column on both
+    # sides, the merge must not duplicate USUBJID in the `on=` list or rename
+    # IDVARVAL onto the existing USUBJID column. Both corruptions previously
+    # raised pandas "column label 'USUBJID' is not unique".
+    left_dataset = dataset_implementation.from_dict(
+        {
+            "STUDYID": ["S1", "S1"],
+            "USUBJID": ["S1-001", "S1-002"],
+            "DOMAIN": ["DM", "DM"],
+            "ETHNIC": ["HISPANIC OR LATINO", "OTHER SPECIFIC"],
+        }
+    )
+    right_dataset = dataset_implementation.from_dict(
+        {
+            "STUDYID": ["S1", "S1"],
+            "USUBJID": ["S1-001", "S1-002"],
+            "RDOMAIN": ["DM", "DM"],
+            "IDVAR": ["USUBJID", "USUBJID"],
+            "IDVARVAL": ["S1-001", "S1-002"],
+            "QNAM": ["CETHNIC", "CETHNIC"],
+            "QVAL": ["HISPANIC OR LATINO", "ASIAN"],
+        }
+    )
+
+    merged_df = DataProcessor.merge_pivot_supp_dataset(
+        dataset_implementation=dataset_implementation,
+        left_dataset=left_dataset,
+        right_dataset=right_dataset,
+    )
+    if isinstance(merged_df, DaskDataset):
+        result_data = merged_df.data.compute()
+    else:
+        result_data = merged_df.data
+
+    assert "CETHNIC" in merged_df.columns, "CETHNIC should be created from QNAM"
+    assert "QNAM" not in merged_df.columns, "QNAM should be dropped after pivot"
+    assert "QVAL" not in merged_df.columns, "QVAL should be dropped after pivot"
+    assert "IDVAR" not in merged_df.columns, "IDVAR should be dropped after pivot"
+    assert "IDVARVAL" not in merged_df.columns, "IDVARVAL should be dropped after pivot"
+    # Each DM row retains its original USUBJID and picks up the matching
+    # CETHNIC from the single SUPPDM row whose IDVARVAL == that USUBJID.
+    assert len(result_data) == 2
+    row1 = result_data[result_data["USUBJID"] == "S1-001"].iloc[0]
+    assert row1["ETHNIC"] == "HISPANIC OR LATINO"
+    assert row1["CETHNIC"] == "HISPANIC OR LATINO"
+    row2 = result_data[result_data["USUBJID"] == "S1-002"].iloc[0]
+    assert row2["ETHNIC"] == "OTHER SPECIFIC"
+    assert row2["CETHNIC"] == "ASIAN"

@@ -1,0 +1,39 @@
+{
+  "datasetJSONCreationDateTime": "2026-04-23T00:00:00",
+  "datasetJSONVersion": "1.1.0",
+  "sourceSystem": { "name": "Cumba", "version": "1.0.0" },
+  "studyOID": "ADAMCR0053.REPRO",
+  "metaDataVersionOID": "MDV.ADAMCR0053",
+  "itemGroupOID": "IG.DM",
+  "records": 1,
+  "name": "DM",
+  "label": "Demographics",
+  "columns": [
+    {
+      "itemOID": "IT.DM.STUDYID",
+      "name": "STUDYID",
+      "label": "Study Identifier",
+      "dataType": "string",
+      "length": 12,
+      "keySequence": 1
+    },
+    {
+      "itemOID": "IT.DM.DOMAIN",
+      "name": "DOMAIN",
+      "label": "Domain Abbreviation",
+      "dataType": "string",
+      "length": 2
+    },
+    {
+      "itemOID": "IT.DM.USUBJID",
+      "name": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "dataType": "string",
+      "length": 16,
+      "keySequence": 2
+    }
+  ],
+  "rows": [
+    ["S1", "DM", "001"]
+  ]
+}

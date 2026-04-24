@@ -1,0 +1,103 @@
+{
+  "id": "38203751-271e-58ed-8704-40dd5f5cdc24",
+  "Authorities": [
+    {
+      "Organization": "CDISC",
+      "Standards": [
+        {
+          "Name": "ADaMIG",
+          "Version": "1.3",
+          "References": [
+            {
+              "Citations": [
+                {
+                  "Cited_Guidance": "ADaMIG v1.3, Section 3.1.1, Item 3: Any variable in an ADaM dataset whose name is the same as an SDTM variable must be a copy of the SDTM variable, and its label, meaning, and values must not be modified. ADaM adheres to a principle of harmonization known as \"same name, same meaning, same values.\"",
+                  "Document": "ADaMIG v1.3",
+                  "Section": "3.1.1",
+                  "Item": "3"
+                }
+              ],
+              "Origin": "ADaM Conformance Rules",
+              "Rule_Identifier": {
+                "Id": "CR53",
+                "Version": "1"
+              },
+              "Version": "5.0"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Core": {
+    "Id": "ADAMCR-0053",
+    "Status": "Draft",
+    "Version": "1"
+  },
+  "Description": "The value of USUBJID is not present in SDTM.DM",
+  "Rule_Type": "Record Data",
+  "Sensitivity": "Record",
+  "Executability": "Fully Executable",
+  "Scope": {
+    "Classes": {
+      "Include": [
+        "ALL"
+      ]
+    }
+  },
+  "Check": {
+    "all": [
+      {
+        "not": {
+          "all": [
+            {
+              "name": "$datasets",
+              "operator": "shares_no_elements_with",
+              "value": [
+                "DM"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "DM.USUBJID",
+        "operator": "empty"
+      }
+    ]
+  },
+  "Outcome": {
+    "Message": "The value of USUBJID is not present in SDTM.DM",
+    "Output_Variables": [
+      "USUBJID"
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "/mdr/rules/adamcr/1-3/rule/38203751-271e-58ed-8704-40dd5f5cdc24",
+      "title": "ADAMCR-0053",
+      "type": "Conformance Rule"
+    },
+    "package": {
+      "href": "/mdr/rules/adamcr/1-3",
+      "title": "ADaM Conformance Rules v5.0 (ADaMIG v1.3)",
+      "type": "Conformance Rules Package"
+    }
+  },
+  "Match_Datasets": [
+    {
+      "Name": "DM",
+      "Keys": [
+        "USUBJID"
+      ],
+      "Join_Type": "left"
+    }
+  ],
+  "Operations": [
+    {
+      "id": "$datasets",
+      "operator": "dataset_names"
+    }
+  ],
+  "_resolution": "Rewritten"
+}
