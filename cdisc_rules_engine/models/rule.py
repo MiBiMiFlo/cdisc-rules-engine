@@ -127,6 +127,13 @@ class Rule:
         all_conditions = conditions.get("all")
         any_conditions = conditions.get("any")
         not_condition = conditions.get("not")
+        # Bare-leaf Check (no all/any/not wrapper) — wrap it as a single-element
+        # all. business_rules_enhanced's check_conditions_recursively falls
+        # through to check_condition on such an outer node and crashes with
+        # KeyError: 'name' because the CDISC leaf shape (name/operator/value)
+        # is not what the library expects at this layer.
+        if not (all_conditions or any_conditions or not_condition):
+            return {"all": cls.build_conditions([conditions])}
         conditions_json = {}
         if all_conditions:
             conditions_json["all"] = cls.build_conditions(all_conditions)

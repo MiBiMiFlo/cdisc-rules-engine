@@ -1,0 +1,47 @@
+{
+  "datasetJSONCreationDateTime": "2026-04-23T00:00:00",
+  "datasetJSONVersion": "1.1.0",
+  "sourceSystem": { "name": "Cumba", "version": "1.0.0" },
+  "studyOID": "CORE000726.REPRO",
+  "metaDataVersionOID": "MDV.CORE000726",
+  "itemGroupOID": "IG.DM",
+  "records": 2,
+  "name": "DM",
+  "label": "Demographics",
+  "columns": [
+    {
+      "itemOID": "IT.DM.STUDYID",
+      "name": "STUDYID",
+      "label": "Study Identifier",
+      "dataType": "string",
+      "length": 12,
+      "keySequence": 1
+    },
+    {
+      "itemOID": "IT.DM.DOMAIN",
+      "name": "DOMAIN",
+      "label": "Domain Abbreviation",
+      "dataType": "string",
+      "length": 2
+    },
+    {
+      "itemOID": "IT.DM.USUBJID",
+      "name": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "dataType": "string",
+      "length": 16,
+      "keySequence": 2
+    },
+    {
+      "itemOID": "IT.DM.ETHNIC",
+      "name": "ETHNIC",
+      "label": "Ethnicity",
+      "dataType": "string",
+      "length": 32
+    }
+  ],
+  "rows": [
+    ["STUDY01", "DM", "STUDY01-0001", "HISPANIC OR LATINO"],
+    ["STUDY01", "DM", "STUDY01-0002", "OTHER SPECIFIC"]
+  ]
+}
