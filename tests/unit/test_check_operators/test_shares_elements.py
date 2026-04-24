@@ -130,3 +130,39 @@ def test_element_sharing_operators_with_mixed_types():
     assert dataframe_type.shares_no_elements_with(
         {"target": "target", "comparator": "comparator"}
     ).tolist() == [False, False, False, False]
+
+
+def test_shares_no_elements_with_literal_comparator_list():
+    # Regression for ADAMCR-0053 / Finding #30. rules-adamig-1-3.json's
+    # ADAMCR-0053 Check passes a literal list as the comparator
+    # (e.g. shares_no_elements_with($datasets, ["DM"])). The operator used
+    # to do row[comparator] unconditionally, which crashes when comparator
+    # is a literal list rather than a column name:
+    #   "None of [Index(['DM'], dtype='object')] are in the [index]".
+    data = {
+        "target": [["ADLB", "DM"], ["ADLB", "AE"]],
+    }
+    df = PandasDataset.from_dict(data)
+    dataframe_type = DataframeType({"value": df})
+    # Literal list comparator — operator must treat it as the literal value,
+    # not a column to look up per row.
+    assert dataframe_type.shares_no_elements_with(
+        {"target": "target", "comparator": ["DM"]}
+    ).tolist() == [False, True]
+
+
+def test_shares_no_elements_with_post_merge_suffix_target():
+    # After Match_Datasets merges, a column may be renamed (USUBJID → USUBJID.DM)
+    # or suffixed (USUBJID_DM). The operator must fall back to those forms
+    # rather than KeyError on the bare name.
+    data = {
+        "USUBJID.DM": [["001"], ["002"]],
+    }
+    df = PandasDataset.from_dict(data)
+    dataframe_type = DataframeType({"value": df})
+    # Target "USUBJID" does not exist as a column, but "USUBJID.DM" does.
+    # Operator must resolve the dotted form and not crash.
+    result = dataframe_type.shares_no_elements_with(
+        {"target": "USUBJID", "comparator": ["001"]}
+    ).tolist()
+    assert result == [False, True]

@@ -969,6 +969,94 @@ def test_preprocess_with_merge_comparison(
 
 
 @patch("cdisc_rules_engine.services.data_services.LocalDataService.get_dataset")
+def test_preprocess_renames_match_key_when_referenced(mock_get_dataset: MagicMock):
+    """Regression for ADAMCR-0053 / Finding #30.
+
+    When a Check leaf references `DM.USUBJID` (dotted post-merge form) and
+    Match_Datasets uses USUBJID as the natural join key, the preprocessor
+    renames DM's USUBJID → DM.USUBJID before merge. The match keys passed
+    to pandas must be updated to reflect the rename — otherwise pandas
+    raises `KeyError: 'USUBJID'` because the right-hand side no longer
+    carries a USUBJID column.
+    """
+    target_dataset = PandasDataset(
+        pd.DataFrame.from_dict(
+            {
+                "STUDYID": ["S1", "S1"],
+                "USUBJID": ["001", "002"],
+            }
+        )
+    )
+    match_dataset = PandasDataset(
+        pd.DataFrame.from_dict(
+            {
+                "STUDYID": ["S1"],
+                "DOMAIN": ["DM"],
+                "USUBJID": ["001"],
+            }
+        )
+    )
+    path_to_dataset_map: dict = {
+        os.path.join("study_id", "data_bundle_id", "dm.xpt"): match_dataset,
+        os.path.join("study_id", "data_bundle_id", "adlb.xpt"): target_dataset,
+    }
+    mock_get_dataset.side_effect = lambda dataset_name: path_to_dataset_map[
+        dataset_name
+    ]
+
+    # Minimal executable rule: primary domain ADLB, Match_Datasets joins DM on
+    # USUBJID (left), Check references DM.USUBJID via the `empty` operator.
+    rule = {
+        "core_id": "UNIT-PREPROC-RENAME",
+        "datasets": [
+            {
+                "domain_name": "DM",
+                "match_key": ["USUBJID"],
+                "join_type": "left",
+                "wildcard": "**",
+            }
+        ],
+        "conditions": ConditionCompositeFactory.get_condition_composite(
+            {
+                "all": [
+                    {
+                        "name": "get_dataset",
+                        "operator": "empty",
+                        "value": {"target": "DM.USUBJID"},
+                    }
+                ]
+            }
+        ),
+    }
+
+    data_service = LocalDataService(MagicMock(), MagicMock(), MagicMock())
+    preprocessor = DatasetPreprocessor(
+        target_dataset,
+        SDTMDatasetMetadata(
+            first_record={"DOMAIN": "ADLB"},
+            full_path=os.path.join("study_id", "data_bundle_id", "adlb.xpt"),
+        ),
+        data_service,
+        InMemoryCacheService(),
+    )
+    result = preprocessor.preprocess(
+        rule=rule,
+        datasets=[
+            SDTMDatasetMetadata(first_record={"DOMAIN": "DM"}, filename="dm.xpt"),
+            SDTMDatasetMetadata(first_record={"DOMAIN": "ADLB"}, filename="adlb.xpt"),
+        ],
+    )
+    # Left join preserves both target rows; DM.USUBJID is populated for the
+    # matched row and null for the unmatched row.
+    assert "DM.USUBJID" in result.columns
+    assert "USUBJID" in result.columns
+    merged_df = result.data.sort_values("USUBJID").reset_index(drop=True)
+    assert merged_df["USUBJID"].tolist() == ["001", "002"]
+    assert merged_df["DM.USUBJID"].iloc[0] == "001"
+    assert pd.isna(merged_df["DM.USUBJID"].iloc[1])
+
+
+@patch("cdisc_rules_engine.services.data_services.LocalDataService.get_dataset")
 def test_preprocess_supp_with_blank_idvar_idvarval(mock_get_dataset):
     """
     Test preprocessing when SUPP dataset has blank IDVAR and IDVARVAL.

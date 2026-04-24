@@ -1910,18 +1910,51 @@ class DataframeType(BaseType):
     @type_operator(FIELD_DATAFRAME)
     def shares_no_elements_with(self, other_value: dict):
         target: str = other_value.get("target")
-        comparator: str = other_value.get("comparator")
+        value_is_literal = other_value.get("value_is_literal", False)
+        comparator = other_value.get("comparator")
+
+        def _lookup_target(row, name):
+            # After Match_Datasets merge, the column may have been renamed to
+            # `{name}.{domain}` (e.g. USUBJID → USUBJID.DM). Fall back to the
+            # dotted / suffixed forms that the merge step could have produced
+            # so the operator still evaluates on a post-merge frame. Mirrors
+            # Java's CheckConditionTransformer tolerance.
+            if name in row.index:
+                return row[name]
+            for candidate in (
+                f"{name}.ADSL",
+                f"{name}.DM",
+                f"{name}_ADSL",
+                f"{name}_DM",
+            ):
+                if candidate in row.index:
+                    return row[candidate]
+            raise KeyError(name)
+
+        def _lookup_comparator(row, value):
+            # If comparator is a literal list/set (e.g. rule-authored
+            # ["DM", "ADSL"]) or value_is_literal is explicitly set, use it
+            # as-is. Otherwise treat as a column name and look up on the row.
+            if isinstance(value, (list, set)) or value_is_literal:
+                return value
+            if isinstance(value, str) and value in row.index:
+                return row[value]
+            # Last-resort literal fallback so unknown non-column comparators
+            # don't crash the operator.
+            return value
 
         def check_no_shared_elements(row):
+            target_val = _lookup_target(row, target)
+            comparator_val = _lookup_comparator(row, comparator)
             target_set = (
-                set(row[target])
-                if isinstance(row[target], (list, set))
-                else {row[target]}
+                set(target_val)
+                if isinstance(target_val, (list, set))
+                else {target_val}
             )
             comparator_set = (
-                set(row[comparator])
-                if isinstance(row[comparator], (list, set))
-                else {row[comparator]}
+                set(comparator_val)
+                if isinstance(comparator_val, (list, set))
+                else {comparator_val}
             )
             return len(target_set.intersection(comparator_set)) == 0
 
