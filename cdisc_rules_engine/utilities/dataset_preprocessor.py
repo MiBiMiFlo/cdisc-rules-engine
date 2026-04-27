@@ -9,6 +9,15 @@ from cdisc_rules_engine.interfaces import (
     CacheServiceInterface,
     DataServiceInterface,
 )
+from cdisc_rules_engine.models.rule_conditions.condition_composite import (
+    ConditionComposite,
+)
+from cdisc_rules_engine.models.rule_conditions.not_condition_composite import (
+    NotConditionComposite,
+)
+from cdisc_rules_engine.models.rule_conditions.single_condition import (
+    SingleCondition,
+)
 from cdisc_rules_engine.utilities.data_processor import DataProcessor
 from cdisc_rules_engine.utilities.rule_processor import RuleProcessor
 from cdisc_rules_engine.utilities.utils import (
@@ -45,6 +54,11 @@ class DatasetPreprocessor:
         self._dataset_metadata: SDTMDatasetMetadata = dataset_metadata
         self._data_service = data_service
         self._rule_processor = RuleProcessor(self._data_service, cache_service)
+        # Accumulates the set of QNAM values pivoted into columns by
+        # ``merge_pivot_supp_dataset`` during this preprocess run. Used by
+        # ``_rewrite_qnam_equal_to_leaves`` to fix up Check leaves that
+        # reference QNAM pre-pivot — see CORE-000597 / Symptom B / Finding #24.
+        self._pivoted_qnams: Set[str] = set()
 
     def preprocess(  # noqa
         self, rule: dict, datasets: Iterable[SDTMDatasetMetadata]
@@ -53,6 +67,12 @@ class DatasetPreprocessor:
         Preprocesses the dataset by merging it with the
         datasets from the provided rule.
         """
+        # Reset per-call state. ``_pivoted_qnams`` accumulates QNAM values
+        # observed in any SUPP/SQ child during this preprocess pass; the
+        # set drives the post-merge Check-leaf rewrite at the bottom of
+        # this method (Symptom B / Finding #24 — see CORE-000597).
+        self._pivoted_qnams = set()
+
         rule_datasets: List[dict] = rule.get("datasets")
         if not rule_datasets:
             return self._dataset  # nothing to preprocess
@@ -173,7 +193,142 @@ class DatasetPreprocessor:
                     merged_domains.add(
                         file_info.domain if file_info.domain else file_info.name
                     )
+        # CORE-000597 / Symptom B / Finding #24: when a SUPP/SQ child has been
+        # pivot-merged into ``result``, each unique QNAM has become its own
+        # column on the merged frame and the original ``QNAM``/``QVAL``/
+        # ``QLABEL`` columns have been dropped. Rules authored with the
+        # pre-pivot leaf shape ``{name: "QNAM", operator: "equal_to",
+        # value: "AESOSP"}`` (CORE-000597, 000726, 000746, 000747) would
+        # otherwise raise ``KeyError`` on column lookup; rewrite them in
+        # place to ``{name: "AESOSP", operator: "non_empty"}`` which is the
+        # post-pivot semantic equivalent ("a SUPP child has QNAM=AESOSP" =
+        # "the AESOSP column is populated for this parent row"). Also
+        # synthesize ``QNAM`` and ``QVAL`` columns on the merged frame so
+        # sibling QVAL Check leaves and ``Outcome.Output_Variables`` lists
+        # referencing QNAM/QVAL resolve to the matched QNAM literal and its
+        # corresponding pivoted value.
+        if self._pivoted_qnams:
+            rewritten_qnams = self._rewrite_qnam_equal_to_leaves(
+                rule, self._pivoted_qnams
+            )
+            if rewritten_qnams:
+                self._synthesize_qnam_qval_columns(result, rewritten_qnams)
         return result
+
+    def _rewrite_qnam_equal_to_leaves(
+        self, rule: dict, pivoted_qnams: Set[str]
+    ) -> Set[str]:
+        """Walk ``rule['conditions']`` and rewrite any
+        ``{name: "QNAM", operator: "equal_to", value: <X>}`` leaf where
+        ``<X>`` is one of the pivoted QNAMs to
+        ``{name: <X>, operator: "non_empty"}``. Returns the set of
+        comparator (``<X>``) values that were rewritten — used downstream to
+        synthesize ``QNAM``/``QVAL`` columns on the merged frame. Mirrors
+        Java's leaf-evaluator fallback that resolves unqualified ``QNAM``
+        against the joined SUPP dataset; both engines now agree post-pivot.
+        Idempotent.
+        """
+        rewritten: Set[str] = set()
+        conditions = rule.get("conditions")
+        if conditions is None:
+            return rewritten
+        self._walk_conditions_for_qnam_rewrite(
+            conditions, pivoted_qnams, rewritten
+        )
+        return rewritten
+
+    def _walk_conditions_for_qnam_rewrite(
+        self, condition, pivoted_qnams: Set[str], rewritten: Set[str]
+    ) -> None:
+        if isinstance(condition, ConditionComposite):
+            for cond_list in condition.get_conditions().values():
+                for c in cond_list:
+                    self._walk_conditions_for_qnam_rewrite(
+                        c, pivoted_qnams, rewritten
+                    )
+            return
+        if isinstance(condition, NotConditionComposite):
+            # NotConditionComposite wraps a composite; recurse via the
+            # private attribute since there's no public accessor for it.
+            self._walk_conditions_for_qnam_rewrite(
+                condition._condition_composite, pivoted_qnams, rewritten
+            )
+            return
+        if isinstance(condition, SingleCondition):
+            leaf = condition.get_conditions()
+            if not isinstance(leaf, dict):
+                return
+            # ``Rule.from_cdisc_metadata`` rewrites
+            # ``{name: "QNAM", operator: "equal_to", value: "AESOSP"}`` into the
+            # ``business_rules``-flavoured shape
+            # ``{name: "get_dataset", operator: "equal_to",
+            #     value: {target: "QNAM", comparator: "AESOSP",
+            #             value_is_literal: true}}``.
+            # Match on that shape: name=get_dataset, operator=equal_to,
+            # value.target=QNAM, value.comparator in pivoted_qnams.
+            if leaf.get("operator") != "equal_to":
+                return
+            if leaf.get("name") != "get_dataset":
+                return
+            value = leaf.get("value")
+            if not isinstance(value, dict):
+                return
+            if value.get("target") != "QNAM":
+                return
+            comparator = value.get("comparator")
+            if not isinstance(comparator, str) or comparator not in pivoted_qnams:
+                return
+            # Rewrite to the post-pivot equivalent:
+            # ``{name: "get_dataset", operator: "non_empty",
+            #    value: {target: <comparator>}}`` — i.e. the column named after
+            # the (now-pivoted) QNAM is populated for this parent row.
+            leaf["operator"] = "non_empty"
+            leaf["value"] = {"target": comparator}
+            rewritten.add(comparator)
+
+    def _synthesize_qnam_qval_columns(
+        self, result: DatasetInterface, rewritten_qnams: Set[str]
+    ) -> None:
+        """Add ``QNAM`` and ``QVAL`` columns to the merged frame so sibling
+        Check leaves that still reference the pre-pivot ``QVAL`` column, and
+        ``Outcome.Output_Variables`` entries naming ``QNAM``/``QVAL``,
+        resolve to the right values per parent row. For each row, QNAM is
+        set to the first ``<X>`` (in ``rewritten_qnams``, sorted for
+        determinism) whose pivoted column is populated, and QVAL is set to
+        that column's value. Rows where no rewritten QNAM matches get NA on
+        both columns. ``process_supp`` already dropped the originals so
+        adding them back here doesn't clobber anything.
+        """
+        try:
+            existing_columns = list(result.columns)
+        except Exception:
+            return
+        # Defensive: don't overwrite columns the test author or upstream
+        # somehow already set on the frame.
+        if "QNAM" in existing_columns or "QVAL" in existing_columns:
+            return
+        candidates = [x for x in sorted(rewritten_qnams) if x in existing_columns]
+        if not candidates:
+            return
+        qnam_col: List = []
+        qval_col: List = []
+        try:
+            row_count = len(result)
+        except Exception:
+            return
+        for idx in range(row_count):
+            matched_qnam = pd.NA
+            matched_qval = pd.NA
+            for x in candidates:
+                v = result[x].iloc[idx]
+                if pd.notna(v) and str(v) != "":
+                    matched_qnam = x
+                    matched_qval = v
+                    break
+            qnam_col.append(matched_qnam)
+            qval_col.append(matched_qval)
+        result["QNAM"] = qnam_col
+        result["QVAL"] = qval_col
 
     def _find_parent_dataset(
         self, datasets: Iterable[SDTMDatasetMetadata], domain_details: dict
@@ -571,6 +726,23 @@ class DatasetPreprocessor:
         elif right_dataset_domain_name.startswith(
             "SUPP"
         ) or right_dataset_domain_name.startswith("SQ"):
+            # Capture the QNAM values about to be pivoted into columns so the
+            # rule's Check leaves can be rewritten post-merge (CORE-000597 /
+            # Symptom B / Finding #24). ``merge_pivot_supp_dataset`` ->
+            # ``process_supp`` drops the original ``QNAM`` / ``QVAL`` /
+            # ``QLABEL`` columns, so any Check authored against the pre-pivot
+            # QNAM column would otherwise raise KeyError.
+            if "QNAM" in right_dataset.columns:
+                try:
+                    qnams = right_dataset["QNAM"].unique()
+                    self._pivoted_qnams.update(
+                        str(q) for q in qnams if pd.notna(q)
+                    )
+                except Exception:
+                    # Tracking pivoted QNAMs is best-effort; if the inspection
+                    # fails for any reason the rewrite simply doesn't fire and
+                    # the rule preserves its original (possibly broken) shape.
+                    pass
             try:
                 result: DatasetInterface = DataProcessor.merge_pivot_supp_dataset(
                     dataset_implementation=self._data_service.dataset_implementation,
