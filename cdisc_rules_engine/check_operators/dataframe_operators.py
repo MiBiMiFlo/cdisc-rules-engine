@@ -1373,6 +1373,97 @@ class DataframeType(BaseType):
 
     @log_operator_execution
     @type_operator(FIELD_DATAFRAME)
+    def has_multiple_values_for(self, other_value: dict):
+        """Unidirectional functional-dependency check: flags rows where the
+        ``target`` column takes more than one distinct value for the same
+        ``comparator`` value within an optional partition.
+
+        Polymorphic ``within`` (Fix #25): accepts either a single column name
+        ("PARAMCD") or a list of column names (["USUBJID", "SPDEVID",
+        "PARAMCD"]) for multi-column partitioning. ADAMCR-0693/0694 use the
+        3-column form; ADAMCR-0732 uses the 2-column form (USUBJID,
+        PARAMCD); shipping rules with the older single-string ``within``
+        continue to work unchanged.
+
+        Mirrors Java's ``OperatorRegistry.evalHasMultipleValuesFor``. Unlike
+        ``is_not_unique_relationship`` (bidirectional), this operator only
+        flags rows whose ``comparator`` value maps to multiple distinct
+        ``target`` values — rows whose ``target`` value maps to multiple
+        ``comparator`` values are NOT flagged. Missing target or comparator
+        cells exclude the row from grouping (do not contribute to the
+        per-key value set, per Java's ``isMissing(dvKey) || isMissing(dvDep)``
+        skip).
+        """
+        target = other_value.get("target")
+        comparator = other_value.get("comparator")
+        if target is None or comparator is None:
+            return self.value.convert_to_series([False] * len(self.value))
+
+        within = other_value.get("within")
+        if within is None:
+            within_columns = []
+        else:
+            within_columns = self._normalize_grouping_columns(within)
+
+        result = self.value.convert_to_series([False] * len(self.value))
+
+        if within_columns:
+            # Group by partition columns; within each partition, find comparator
+            # values that map to >1 distinct target values; flag every row whose
+            # comparator value is in that bad set.
+            groups = self.value.data.groupby(within_columns, sort=False, dropna=False)
+            for _, group in groups:
+                bad_comparators = self._has_multiple_values_for_bad_keys(
+                    group, target, comparator
+                )
+                if not bad_comparators:
+                    continue
+                mask = self.value[comparator].isin(bad_comparators)
+                # Restrict the mask to rows that actually belong to this group
+                # (the same comparator value can occur in other partitions and
+                # must not be flagged transitively).
+                group_mask = self.value.convert_to_series(
+                    [True] * len(self.value)
+                )
+                for col in within_columns:
+                    group_first = group[col].iloc[0]
+                    if pd.isna(group_first):
+                        group_mask = group_mask & self.value[col].isna()
+                    else:
+                        group_mask = group_mask & (self.value[col] == group_first)
+                result = result | (mask & group_mask)
+        else:
+            # Ungrouped: scan the whole frame.
+            bad_comparators = self._has_multiple_values_for_bad_keys(
+                self.value.data, target, comparator
+            )
+            if bad_comparators:
+                result = result | self.value[comparator].isin(bad_comparators)
+        return result
+
+    @log_operator_execution
+    @type_operator(FIELD_DATAFRAME)
+    def does_not_have_multiple_values_for(self, other_value: dict):
+        return ~self.has_multiple_values_for(other_value)
+
+    def _has_multiple_values_for_bad_keys(self, df, target, comparator):
+        """For each non-null ``comparator`` value in ``df``, return the set
+        of values that map to more than one distinct non-null ``target``
+        value. Rows where either target or comparator is missing are
+        excluded — matches Java's ``isMissing()`` skip semantics.
+        """
+        # Drop rows with missing target or comparator (mirrors Java).
+        sub = df[[target, comparator]].dropna(subset=[target, comparator])
+        # Empty-string is also "missing" per Java semantics
+        sub = sub[(sub[target] != "") & (sub[comparator] != "")]
+        if sub.empty:
+            return set()
+        # For each comparator value, count distinct target values.
+        counts = sub.groupby(comparator)[target].nunique()
+        return set(counts[counts > 1].index.tolist())
+
+    @log_operator_execution
+    @type_operator(FIELD_DATAFRAME)
     def is_ordered_set(self, other_value):
         target = other_value.get("target")
         value = other_value.get("comparator")
