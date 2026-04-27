@@ -79,9 +79,22 @@ class DummyDataService(BaseDataService):
         self, dataset_name: str, **kwargs
     ) -> SDTMDatasetMetadata:
         dataset_metadata: dict = self.__get_dataset_metadata(dataset_name, **kwargs)
+        # Prefer the underlying DummyDataset's actual ``first_record`` (set from
+        # the mock ``records``) so the SDTM ``DOMAIN`` cell carries the value
+        # the test author wrote, not the dataset name. This matters for rules
+        # that check whether the dataset name agrees with the DOMAIN cell
+        # (e.g. CORE-000598 ``dataset_name prefix_not_equal_to DOMAIN``); the
+        # old fallback always set DOMAIN to the dataset name and so the rule
+        # could never fire its violation under the dummy service.
+        underlying: Optional[DummyDataset] = self.get_dataset_data(dataset_name)
+        first_record = (
+            getattr(underlying, "first_record", None)
+            if underlying is not None
+            else None
+        ) or {"DOMAIN": dataset_metadata["dataset_name"][0]}
         return SDTMDatasetMetadata(
             name=dataset_metadata["dataset_name"][0],
-            first_record={"DOMAIN": dataset_metadata["dataset_name"][0]},
+            first_record=first_record,
             label=dataset_metadata["dataset_label"][0],
             modification_date=datetime.now().isoformat(),
             filename=dataset_metadata["filename"][0],

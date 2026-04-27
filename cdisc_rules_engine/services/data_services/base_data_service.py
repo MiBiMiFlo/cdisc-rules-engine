@@ -228,6 +228,11 @@ class BaseDataService(DataServiceInterface, ABC):
             "is_ap": [dataset_metadata.is_ap],
             "ap_suffix": [dataset_metadata.ap_suffix],
             "domain": [dataset_metadata.domain],
+            # SDTM-cased alias so rules referencing the SDTM `DOMAIN` variable
+            # (e.g. CORE-000598's Output_Variables: ["dataset_name", "DOMAIN"])
+            # resolve against this metadata frame instead of the
+            # "Not in dataset" sentinel.
+            "DOMAIN": [dataset_metadata.domain],
         }
         return self.dataset_implementation.from_dict(metadata_to_return)
 

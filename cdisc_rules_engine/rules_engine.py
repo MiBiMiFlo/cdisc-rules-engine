@@ -141,6 +141,17 @@ class RulesEngine:
             )
         else:
             total_errors = 0
+            # Track unsplit_name parents seen so far so split-dataset filtering
+            # remains decoupled from the result-dict key. Previously the dict
+            # was keyed by ``unsplit_name`` and that key doubled as the
+            # split-already-seen check; but for non-split datasets where the
+            # row-level DOMAIN cell disagrees with the dataset name (e.g.
+            # CORE-000598 fixtures: dataset AE with DOMAIN=XY) ``unsplit_name``
+            # returns the DOMAIN cell value, which loses the dataset identity
+            # and hides results from callers who look up by dataset name. Key
+            # the result dict by ``name`` for stable identity; keep the
+            # split-filter behaviour via ``seen_parents``.
+            seen_parents: set = set()
             for dataset_metadata in datasets:
                 if (
                     self.max_errors_per_rule
@@ -152,7 +163,7 @@ class RulesEngine:
                         f"Skipping remaining datasets."
                     )
                     break
-                if dataset_metadata.unsplit_name in results and "domains" in rule:
+                if dataset_metadata.unsplit_name in seen_parents and "domains" in rule:
                     include_split = rule["domains"].get("include_split_datasets", False)
                     if not include_split:
                         continue  # handling split datasets
@@ -166,7 +177,8 @@ class RulesEngine:
                         dataset_results, rule, dataset_metadata
                     )
 
-                results[dataset_metadata.unsplit_name] = dataset_results
+                results[dataset_metadata.name] = dataset_results
+                seen_parents.add(dataset_metadata.unsplit_name)
 
                 if not self.errors_per_dataset_flag:
                     total_errors, limit_reached = (
